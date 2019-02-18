@@ -1,0 +1,37 @@
+{
+    "name": "spookygames/flarum-ext-auth-keycloak",
+    "description": "Allow users to sign in/up/out with Keycloak.",
+    "type": "flarum-extension",
+    "keywords": ["authentication"],
+    "license": "MIT",
+    "minimum-stability": "dev",
+    "authors": [
+        {
+            "name": "Spooky Games",
+            "email": "we@spooky.games"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/spookygames/flarum-ext-auth-keycloak/issues",
+        "source": "https://github.com/spookygames/flarum-ext-auth-keycloak"
+    },
+    "require": {
+        "flarum/core": "^0.1.0-beta.5",
+        "stevenmaguire/oauth2-keycloak": "2.0.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "SpookyGames\\Auth\\Keycloak\\": "src/"
+        }
+    },
+    "extra": {
+        "flarum-extension": {
+            "title": "Keycloak Login",
+            "icon": {
+                "name": "sign-in",
+                "backgroundColor": "#D13E32",
+                "color": "#fff"
+            }
+        }
+    }
+}

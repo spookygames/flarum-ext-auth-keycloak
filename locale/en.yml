@@ -1,0 +1,11 @@
+flarum-ext-auth-keycloak:
+
+  admin:
+    keycloak_settings:
+      title: "Keycloak Settings"
+      server_url_label: "Server URL"
+      realm_label: "Realm"
+      client_id_label: "Client ID"
+      client_secret_label: "Client Secret"
+      encryption_algorithm_label: "Encryption algorithm"
+      encryption_key_label: "Encryption key (or cert)"
