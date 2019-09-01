@@ -1,11 +1,9 @@
-import {extend, override} from "flarum/extend";
+import { extend } from "flarum/extend";
 import app from "flarum/app";
 import HeaderSecondary from "flarum/components/HeaderSecondary";
 import SettingsPage from "flarum/components/SettingsPage";
-import LogInModal from "flarum/components/LogInModal";
 
-import LogInButtons from 'flarum/components/LogInButtons';
-import LogInButton from 'flarum/components/LogInButton';
+import KeycloakLogInButton from './components/KeycloakLogInButton';
 
 app.initializers.add('spookygames-auth-keycloak', () => {
 
@@ -14,15 +12,14 @@ app.initializers.add('spookygames-auth-keycloak', () => {
         // Replace login button with redirection to Keycloak
         if (items.has('logIn')) {
             items.replace('logIn',
-                <LogInButton
+                <KeycloakLogInButton
                   className="Button LogInButton--keycloak"
                   icon="fab arrow-right"
                   path="/auth/keycloak">
                   {app.translator.trans('core.forum.header.log_in_link')}
-                </LogInButton>
+                </KeycloakLogInButton>
             );
         }
-
 
         // Simply remove signup button
         if (items.has('signUp')) {
