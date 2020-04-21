@@ -54,7 +54,8 @@ class KeycloakAuthController implements RequestHandlerInterface
      */
     public function handle(Request $request): ResponseInterface
     {
-        $redirectUri = (string) $request->getAttribute('originalUri', $request->getUri())->withQuery('');
+        $conf = app('flarum.config');
+        $redirectUri = $conf['url'] . "/auth/keycloak";
 
         $provider = new Keycloak([
                 'authServerUrl'         => $this->settings->get('spookygames-auth-keycloak.server_url'),
