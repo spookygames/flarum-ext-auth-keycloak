@@ -40,6 +40,11 @@ export default class KeycloakSettingsModal extends SettingsModal {
       <div className="Form-group">
         <label>{app.translator.trans('flarum-ext-auth-keycloak.admin.keycloak_settings.encryption_key_label')}</label>
         <input className="FormControl" bidi={this.setting('spookygames-auth-keycloak.encryption_key')}/>
+      </div>,
+
+      <div className="Form-group">
+        <label>{app.translator.trans('flarum-ext-auth-keycloak.admin.keycloak_settings.role_mapping_label')}</label>
+        <input className="FormControl" bidi={this.setting('spookygames-auth-keycloak.role_mapping')}/>
       </div>
     ];
   }

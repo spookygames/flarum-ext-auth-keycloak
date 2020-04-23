@@ -9,3 +9,4 @@ flarum-ext-auth-keycloak:
       client_secret_label: "Client Secret"
       encryption_algorithm_label: "Encryption algorithm"
       encryption_key_label: "Encryption key (or cert)"
+      role_mapping_label: "Role-to-group mapping"

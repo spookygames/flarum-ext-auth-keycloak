@@ -3,11 +3,14 @@
 namespace SpookyGames\Auth\Keycloak;
 
 use Exception;
+use Flarum\Group\GroupRepository;
 use Flarum\Forum\Auth\Registration;
 use Flarum\Forum\Auth\ResponseFactory;
 use Flarum\Settings\SettingsRepositoryInterface;
+use Flarum\User\LoginProvider;
 use Flarum\User\User;
 use Flarum\User\RegistrationToken;
+use Flarum\User\Command\EditUser;
 use Flarum\User\Command\RegisterUser;
 use Illuminate\Contracts\Bus\Dispatcher;
 use League\OAuth2\Client\Token\AccessToken;
@@ -31,6 +34,11 @@ class KeycloakAuthController implements RequestHandlerInterface
     protected $settings;
 
     /**
+     * @var GroupRepository
+     */
+    protected $groupRepository;
+
+    /**
      * @var Dispatcher
      */
      protected $bus;
@@ -38,12 +46,14 @@ class KeycloakAuthController implements RequestHandlerInterface
     /**
      * @param ResponseFactory $response
      * @param SettingsRepositoryInterface $settings
+     * @param GroupRepository $groupRepository
      * @param Dispatcher $bus
      */
-    public function __construct(ResponseFactory $response, SettingsRepositoryInterface $settings, Dispatcher $bus)
+    public function __construct(ResponseFactory $response, SettingsRepositoryInterface $settings, GroupRepository $groupRepository, Dispatcher $bus)
     {
         $this->response = $response;
         $this->settings = $settings;
+        $this->groupRepository = $groupRepository;
         $this->bus = $bus;
     }
 
@@ -78,7 +88,6 @@ class KeycloakAuthController implements RequestHandlerInterface
             $session->put('oauth2state', $provider->getState());
             header('Location: '.$authUrl);
 
-            // return new RedirectResponse($authUrl.'&display=popup');
             return new RedirectResponse($authUrl);
         }
 
@@ -98,64 +107,107 @@ class KeycloakAuthController implements RequestHandlerInterface
             exit('Failed to get access token: '.$e->getMessage());
         }
 
-        // We got an access token, let's now get user details
+        // We got an access token, let's get user details
         try {
 
             /** @var KeycloakResourceOwner $user */
-            $user = $provider->getResourceOwner($token);
+            $remoteUser = $provider->getResourceOwner($token);
 
         } catch (Exception $e) {
             exit('Failed to get resource owner: '.$e->getMessage());
         }
 
+        // Fine! We now know everything we need about our remote user
+        $remoteUserArray = $remoteUser->toArray();
+        $groups = [];
+
+        // Map Keycloak roles onto Flarum groups
+        if (isset($remoteUserArray['roles']) && is_array($remoteUserArray['roles'])) {
+
+            if($roleMapping = json_decode($this->settings->get('spookygames-auth-keycloak.role_mapping'), true)) {
+
+                foreach ($remoteUserArray['roles'] as $role) {
+                    if ($groupName = array_get($roleMapping, $role)) {
+                        if ($group = $this->groupRepository->findByName($groupName)) {
+                            $groups[] = array('id' => $group->id);
+                        }
+                    }
+                }
+            }
+        }
+
+      if ($localUser = LoginProvider::logIn('keycloak', $remoteUser->getId())) {
+            // User already exists and is synced with Keycloak
+
+            // Update with latest information
+
+            $registration = $this->decorateRegistration(new Registration, $remoteUser);
+
+            $data = [
+                'attributes' => array_merge($registration->getProvided(), $registration->getSuggested()),
+                'relationships' => array('groups' => array('data' => $groups))
+            ];
+
+            try {
+                // Update user
+                $this->bus->dispatch(new EditUser($localUser->id, $this->findFirstAdminUser(), $data));
+            } catch (Exception $e) {
+                exit('Failed to update Flarum user: '.$e->getMessage());
+            }
+        }
+
         $actor = $request->getAttribute('actor');
 
         return $this->response->make(
-            'keycloak', $user->getId(),
-            function (Registration $registration) use ($user, $provider, $token, $actor) {
+            'keycloak', $remoteUser->getId(),
+            function (Registration $registration) use ($remoteUser, $groups, $actor) {
 
-                $userArray = $user->toArray();
-                $userName = array_get($userArray, 'preferred_username');
-
-                $registration
-                    ->provideTrustedEmail($user->getEmail())
-                    ->suggestUsername($userName)
-                    ->setPayload($userArray);
-
-                $pic = array_get($userArray, 'picture');
-                if ($pic) {
-                    $registration->provideAvatar($pic);
-                }
+                $registration = $this->decorateRegistration($registration, $remoteUser);
 
                 $provided = $registration->getProvided();
 
+                $adminActor = $this->findFirstAdminUser();
+
                 if ($localUser = User::where(array_only($provided, 'email'))->first()) {
 
-                    // User exists
+                    // User already exists but not synced with Keycloak
+
                     // Update with latest information
-                    $localUser
-                        ->rename($userName)
-                        ->changeEmail($user->getEmail());
-                    $localUser->save();
+                    $data = [
+                        'attributes' => array_merge($provided, $registration->getSuggested()),
+                        'relationships' => array('groups' => array('data' => $groups))
+                    ];
+
+                    try {
+                        // Update user
+                        $this->bus->dispatch(new EditUser($localUser->id, $adminActor, $data));
+                    } catch (Exception $e) {
+                        exit('Failed to update Flarum user: '.$e->getMessage());
+                    }
 
                 } else {
 
                     // User does not exist (yet)
                     // Automatically create it
 
-                    $registrationToken = RegistrationToken::generate('keycloak', $user->getId(), $provided, $registration->getPayload());
+                    $registrationToken = RegistrationToken::generate('keycloak', $remoteUser->getId(), $provided, $registration->getPayload());
                     $registrationToken->save();
 
                     $data = [
                         'attributes' => array_merge($provided, $registration->getSuggested(), [
                                 'token' => $registrationToken->token,
                                 'provided' => array_keys($provided)
-                            ])
+                            ]),
+                        'relationships' => array('groups' => array('data' => $groups))
                     ];
 
                     try {
                         // Create user
                         $created = $this->bus->dispatch(new RegisterUser($actor, $data));
+
+                        // Edit user afterwards in order to propagate groups too
+                        $this->bus->dispatch(new EditUser($created->id, $adminActor, $data));
+
                         // Remove its new login provider (will be re-created right afterwards)
                         $created->loginProviders()->delete();
                     } catch (Exception $e) {
@@ -165,5 +217,27 @@ class KeycloakAuthController implements RequestHandlerInterface
                 }
             }
         );
+    }
+
+   public function decorateRegistration(Registration $registration, KeycloakResourceOwner $remoteUser): Registration
+   {
+        $remoteUserArray = $remoteUser->toArray();
+
+       $registration
+           ->provideTrustedEmail($remoteUser->getEmail())
+           ->suggestUsername(array_get($remoteUserArray, 'preferred_username'))
+           ->setPayload($remoteUserArray);
+
+       $pic = array_get($remoteUserArray, 'picture');
+       if ($pic) {
+           $registration->provideAvatar($pic);
+       }
+
+       return $registration;
+   }
+
+    public function findFirstAdminUser(): User
+    {
+        return $this->groupRepository->findOrFail('1')->users()->first();
     }
 }
