@@ -17,7 +17,7 @@ composer require spookygames/flarum-ext-auth-keycloak
 
 ## Keycloak setup
 
-Written for Keycloak version 4.8.3-final, your mileage may vary.
+Written for Keycloak version 4.8.3-final, tested up to 13.0.1. Your mileage may vary.
 
 From the _Clients_ tab, add a new client for your Flarum instance (or use an existing one). Root URL should be the URL of your Flarum instance.
 
