@@ -3,7 +3,7 @@
 namespace SpookyGames\Auth\Keycloak;
 
 use Exception;
-use Flarum\Group\GroupRepository;
+use Flarum\Group\Group;
 use Flarum\Forum\Auth\Registration;
 use Flarum\Forum\Auth\ResponseFactory;
 use Flarum\Settings\SettingsRepositoryInterface;
@@ -13,6 +13,7 @@ use Flarum\User\RegistrationToken;
 use Flarum\User\Command\EditUser;
 use Flarum\User\Command\RegisterUser;
 use Illuminate\Contracts\Bus\Dispatcher;
+use Illuminate\Support\Arr;
 use League\OAuth2\Client\Token\AccessToken;
 use Stevenmaguire\OAuth2\Client\Provider\Keycloak;
 use Stevenmaguire\OAuth2\Client\Provider\KeycloakResourceOwner;
@@ -34,11 +35,6 @@ class KeycloakAuthController implements RequestHandlerInterface
     protected $settings;
 
     /**
-     * @var GroupRepository
-     */
-    protected $groupRepository;
-
-    /**
      * @var Dispatcher
      */
      protected $bus;
@@ -46,14 +42,12 @@ class KeycloakAuthController implements RequestHandlerInterface
     /**
      * @param ResponseFactory $response
      * @param SettingsRepositoryInterface $settings
-     * @param GroupRepository $groupRepository
      * @param Dispatcher $bus
      */
-    public function __construct(ResponseFactory $response, SettingsRepositoryInterface $settings, GroupRepository $groupRepository, Dispatcher $bus)
+    public function __construct(ResponseFactory $response, SettingsRepositoryInterface $settings, Dispatcher $bus)
     {
         $this->response = $response;
         $this->settings = $settings;
-        $this->groupRepository = $groupRepository;
         $this->bus = $bus;
     }
 
@@ -80,7 +74,7 @@ class KeycloakAuthController implements RequestHandlerInterface
         $session = $request->getAttribute('session');
         $queryParams = $request->getQueryParams();
 
-        $code = array_get($queryParams, 'code');
+        $code = Arr::get($queryParams, 'code');
 
         if (! $code) {
             // If we don't have an authorization code then get one
@@ -91,7 +85,7 @@ class KeycloakAuthController implements RequestHandlerInterface
             return new RedirectResponse($authUrl);
         }
 
-        $state = array_get($queryParams, 'state');
+        $state = Arr::get($queryParams, 'state');
 
         // Check given state against previously stored one to mitigate CSRF attack
         if (! $state || $state !== $session->get('oauth2state')) {
@@ -127,8 +121,8 @@ class KeycloakAuthController implements RequestHandlerInterface
 
                 $groups = [];
                 foreach ($remoteUserArray['roles'] as $role) {
-                    if ($groupName = array_get($roleMapping, $role)) {
-                        if ($group = $this->groupRepository->findByName($groupName)) {
+                    if ($groupName = Arr::get($roleMapping, $role)) {
+                        if ($group = $this->findGroupByName($groupName)) {
                             $groups[] = array('id' => $group->id);
                         }
                     }
@@ -165,7 +159,7 @@ class KeycloakAuthController implements RequestHandlerInterface
 
                 $adminActor = $this->findFirstAdminUser();
 
-                if ($localUser = User::where(array_only($provided, 'email'))->first()) {
+                if ($localUser = User::where(Arr::only($provided, 'email'))->first()) {
 
                     // User already exists but not synced with Keycloak
 
@@ -216,10 +210,10 @@ class KeycloakAuthController implements RequestHandlerInterface
 
        $registration
            ->provideTrustedEmail($remoteUser->getEmail())
-           ->suggestUsername(array_get($remoteUserArray, 'preferred_username'))
+           ->suggestUsername(Arr::get($remoteUserArray, 'preferred_username'))
            ->setPayload($remoteUserArray);
 
-       $pic = array_get($remoteUserArray, 'picture');
+       $pic = Arr::get($remoteUserArray, 'picture');
        if ($pic) {
            $registration->provideAvatar($pic);
        }
@@ -229,8 +223,13 @@ class KeycloakAuthController implements RequestHandlerInterface
 
     public function findFirstAdminUser(): User
     {
-        return $this->groupRepository->findOrFail('1')->users()->first();
+        return Group::where('id', '1')->firstOrFail()->users()->first();
     }
+
+     public function findGroupByName($name): Group
+     {
+         return Group::where('name_singular', $name)->orWhere('name_plural', $name)->first();
+     }
 
     public function buildUpdateData(array $attributes, array $groups): array
     {

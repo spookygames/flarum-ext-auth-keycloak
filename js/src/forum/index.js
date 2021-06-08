@@ -2,20 +2,32 @@ import { extend, override } from "flarum/extend";
 import app from "flarum/app";
 import HeaderSecondary from "flarum/components/HeaderSecondary";
 import SettingsPage from "flarum/components/SettingsPage";
+import Button from 'flarum/components/Button';
 import LogInModal from 'flarum/components/LogInModal';
-
-import KeycloakLogInButton from './components/KeycloakLogInButton';
 
 app.initializers.add('spookygames-auth-keycloak', () => {
 
     function addKeycloakLoginButton(items) {
         items.add('logIn',
-            <KeycloakLogInButton
-              className="Button LogInButton--keycloak"
-              icon="fab arrow-right"
-              path="/auth/keycloak">
-              {app.translator.trans('core.forum.header.log_in_link')}
-            </KeycloakLogInButton>
+          Button.component(
+  				  {
+              className: 'Button LogInButton--keycloak LogInButton',
+              icon: 'fab arrow-right',
+              onclick: function() {
+                  const width = 600;
+                  const height = 515;
+                  const $window = $(window);
+
+                  window.open(app.forum.attribute('baseUrl') + '/auth/keycloak', 'logInPopup',
+                    `width=${width},` +
+                    `height=${height},` +
+                    `top=${$window.height() / 2 - height / 2},` +
+                    `left=${$window.width() / 2 - width / 2},` +
+                    'status=no,resizable=no');
+                }
+  				  },
+            app.translator.trans('core.forum.header.log_in_link')
+  				)
         );
     }
 

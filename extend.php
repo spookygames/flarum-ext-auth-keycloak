@@ -2,8 +2,9 @@
 
 use SpookyGames\Auth\Keycloak\KeycloakAuthController;
 use SpookyGames\Auth\Keycloak\Listener;
-use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Events\Dispatcher;
 use Flarum\Extend;
+use Flarum\Foundation\Application;
 
 return [
     (new Extend\Frontend('forum'))
@@ -16,7 +17,7 @@ return [
     (new Extend\Routes('forum'))
         ->get('/auth/keycloak', 'auth.keycloak', KeycloakAuthController::class),
 
-    function (Dispatcher $events) {
+    function (Dispatcher $events, Application $app) {
         $events->subscribe(Listener\AddLogoutRedirect::class);
     },
 
