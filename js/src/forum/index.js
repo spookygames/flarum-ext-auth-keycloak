@@ -55,8 +55,7 @@ app.initializers.add('spookygames-auth-keycloak', () => {
     extend(SettingsPage.prototype, 'settingsItems', function(items) {
         // Account management is mostly delegated to Keycloak
         // Better hide this from here
-        if (items.has('account')
-            && items.get('account').props.children.length === 0) {
+        if (items.has('account')) {
             items.remove('account');
         }
     });
