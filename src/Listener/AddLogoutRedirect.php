@@ -22,7 +22,7 @@ class AddLogoutRedirect
         $events->listen(LoggedOut::class, [$this, 'addLogoutRedirect']);
     }
 
-    public function addLogoutRedirect()
+    public function addLogoutRedirect(LoggedOut $event)
     {
         $redirectUrl = $this->url->to('forum')->base();
 

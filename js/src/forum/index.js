@@ -1,5 +1,5 @@
-import { extend, override } from "flarum/extend";
-import app from "flarum/app";
+import { extend, override } from "flarum/common/extend";
+import app from "flarum/common/app";
 import HeaderSecondary from "flarum/components/HeaderSecondary";
 import SettingsPage from "flarum/components/SettingsPage";
 import Button from 'flarum/components/Button';

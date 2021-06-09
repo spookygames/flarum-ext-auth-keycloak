@@ -4,7 +4,6 @@
     "type": "flarum-extension",
     "keywords": ["authentication"],
     "license": "MIT",
-    "minimum-stability": "dev",
     "authors": [
         {
             "name": "Spooky Games",
@@ -16,7 +15,7 @@
         "source": "https://github.com/spookygames/flarum-ext-auth-keycloak"
     },
     "require": {
-        "flarum/core": "^0.1.0-beta.16",
+        "flarum/core": "^1.0",
         "league/oauth2-client": "^2.0",
         "firebase/php-jwt": "^4.0"
     },
