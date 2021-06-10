@@ -4,6 +4,7 @@ import HeaderSecondary from "flarum/components/HeaderSecondary";
 import SettingsPage from "flarum/components/SettingsPage";
 import Button from 'flarum/components/Button';
 import LogInModal from 'flarum/components/LogInModal';
+import AvatarEditor from 'flarum/components/AvatarEditor';
 
 app.initializers.add('spookygames-auth-keycloak', () => {
 
@@ -75,6 +76,22 @@ app.initializers.add('spookygames-auth-keycloak', () => {
     override(LogInModal.prototype, 'footer', function () {
       // Hide hint for forgot password etc
       return [ ];
+    });
+
+    extend(AvatarEditor.prototype, 'view', function (vdom) {
+        if (app.forum.attribute('spookygames-auth-keycloak.delegate_avatars')) {
+          // Hide avatar upload overlay
+          vdom.children.length = 1;
+        }
+        return vdom;
+    });
+
+    extend(AvatarEditor.prototype, 'controlItems', function (items) {
+        if (app.forum.attribute('spookygames-auth-keycloak.delegate_avatars')) {
+          // Hide avatar controls
+          items.items = {};
+        }
+        return items;
     });
 
 });

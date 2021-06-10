@@ -10,3 +10,4 @@ flarum-ext-auth-keycloak:
       encryption_algorithm_label: "Algorithme de chiffrement"
       encryption_key_label: "Clef de chiffrement (ou certificat)"
       role_mapping_label: "Associations rôle->groupe"
+      delegate_avatars_label: "Délègue les avatars"

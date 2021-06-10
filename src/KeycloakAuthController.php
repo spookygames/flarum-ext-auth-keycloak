@@ -142,6 +142,7 @@ class KeycloakAuthController implements RequestHandlerInterface
             try {
                 // Update user
                 $this->bus->dispatch(new EditUser($localUser->id, $this->findFirstAdminUser(), $data));
+                $this->updateInternalIfNeeded($localUser, $remoteUser);
             } catch (Exception $e) {
                 if ($localUser->id != 1) {
                     exit('Failed to update Flarum user: '.$e->getMessage());
@@ -171,6 +172,7 @@ class KeycloakAuthController implements RequestHandlerInterface
                     try {
                         // Update user
                         $this->bus->dispatch(new EditUser($localUser->id, $adminActor, $data));
+                        $this->updateInternalIfNeeded($localUser, $remoteUser);
                     } catch (Exception $e) {
                         if ($localUser->id != 1) {
                             exit('Failed to update Flarum user: '.$e->getMessage());
@@ -196,6 +198,7 @@ class KeycloakAuthController implements RequestHandlerInterface
 
                         // Edit user afterwards in order to propagate groups too
                         $this->bus->dispatch(new EditUser($created->id, $adminActor, $data));
+                        $this->updateInternalIfNeeded($created, $remoteUser);
 
                         // Remove its new login provider (will be re-created right afterwards)
                         $created->loginProviders()->delete();
@@ -219,13 +222,23 @@ class KeycloakAuthController implements RequestHandlerInterface
            ->suggestUsername(Arr::get($remoteUserArray, 'preferred_username'))
            ->setPayload($remoteUserArray);
 
-       $pic = Arr::get($remoteUserArray, 'picture');
-       if ($pic) {
-           $registration->provideAvatar($pic);
-       }
-
        return $registration;
    }
+
+  public function updateInternalIfNeeded(User $user, KeycloakResourceOwner $remoteUser): User
+  {
+       $remoteUserArray = $remoteUser->toArray();
+
+       if ($this->settings->get('spookygames-auth-keycloak.delegate_avatars')) {
+          $pic = Arr::get($remoteUserArray, 'picture');
+          if ($pic && $user->getRawOriginal('avatar_url') != $pic) {
+              $user->changeAvatarPath($pic);
+              $user->save();
+          }
+       }
+
+      return $user;
+  }
 
     public function findFirstAdminUser(): User
     {

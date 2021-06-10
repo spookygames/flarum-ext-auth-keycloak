@@ -62,4 +62,12 @@ app.initializers.add('spookygames-auth-keycloak', app => {
         placeholder: '{"ROLE_MEMBER":"Member","ROLE_MODERATOR":"Mods","ROLE_ADMIN":"Admin"}',
       }
     )
+    .registerSetting(
+      {
+        setting: settingsPrefix + 'delegate_avatars',
+        label: app.translator.trans(translationPrefix + 'delegate_avatars_label'),
+        type: 'boolean',
+        default: 'false',
+      }
+    )
 });
