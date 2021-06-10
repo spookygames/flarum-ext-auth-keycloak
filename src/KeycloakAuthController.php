@@ -231,7 +231,7 @@ class KeycloakAuthController implements RequestHandlerInterface
          return Group::where('name_singular', $name)->orWhere('name_plural', $name)->first();
      }
 
-    public function buildUpdateData(array $attributes, array $groups): array
+    public function buildUpdateData(array $attributes, $groups): array
     {
       $data = [
           'attributes' => $attributes
