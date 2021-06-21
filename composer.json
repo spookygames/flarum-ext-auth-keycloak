@@ -16,13 +16,11 @@
     },
     "require": {
         "flarum/core": "^1.0",
-        "league/oauth2-client": "^2.0",
-        "firebase/php-jwt": "^4.0"
+        "stevenmaguire/oauth2-keycloak": "2.2.2"
     },
     "autoload": {
         "psr-4": {
-            "SpookyGames\\Auth\\Keycloak\\": "src/",
-            "Stevenmaguire\\OAuth2\\Client\\": "src_upstream/"
+            "SpookyGames\\Auth\\Keycloak\\": "src/"
         }
     },
     "extra": {
