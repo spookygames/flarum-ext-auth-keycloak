@@ -34,6 +34,8 @@ From the _Realm Settings_ tab, find the key used by the OpenId Connect workflow 
 
 ![Find Keycloak keys](https://github.com/spookygames/flarum-ext-auth-keycloak/raw/master/images/keycloak-find-keys.png "Find Keycloak keys")
 
+## Extension settings
+
 In the end, extension settings will be:
 * Server URL: the URL to your Keycloak instance, like https://keycloak.example.com/auth. Beware the "auth" with no trailing slash.
 * Realm: the authentication realm you created for your Flarum.
@@ -42,3 +44,4 @@ In the end, extension settings will be:
 * Encryption algorithm: defaults to RS256.
 * Encryption key (or cert): you may copy here the content of what was displayed after you pressed the "Public key" button on Keycloak.
 * Role-to-group mapping: An associative array with roles as keys and group names as values, in JSON format. Example: `{"ROLE_MEMBER":"Member","ROLE_MODERATOR":"Mods","ROLE_ADMIN":"Admin"}`.
+* Delegate avatars: if enabled, the "picture" attribute from Keycloak will be used to handle user avatar instead of Flarum's default behaviour.
