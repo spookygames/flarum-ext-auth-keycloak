@@ -14,6 +14,7 @@ composer require spookygames/flarum-ext-auth-keycloak
 * Install extension via Composer / Packagist
 * Enable extension in the admin/extensions of Flarum
 * Fill in the settings field for the extension
+* Make sure signup is Open in admin/permissions ([here's why](https://github.com/spookygames/flarum-ext-auth-keycloak/issues/22))
 
 ## Keycloak setup
 
