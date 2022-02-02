@@ -14,6 +14,7 @@ use Flarum\User\Command\EditUser;
 use Flarum\User\Command\RegisterUser;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 use League\OAuth2\Client\Token\AccessToken;
 use Stevenmaguire\OAuth2\Client\Provider\Keycloak;
 use Stevenmaguire\OAuth2\Client\Provider\KeycloakResourceOwner;
@@ -194,7 +195,7 @@ class KeycloakAuthController implements RequestHandlerInterface
 
                     try {
                         // Create user
-                        $created = $this->bus->dispatch(new RegisterUser($actor, $data));
+                        $created = $this->bus->dispatch(new RegisterUser($adminActor, $data));
 
                         // Edit user afterwards in order to propagate groups too
                         $this->bus->dispatch(new EditUser($created->id, $adminActor, $data));
@@ -203,9 +204,7 @@ class KeycloakAuthController implements RequestHandlerInterface
                         // Remove its new login provider (will be re-created right afterwards)
                         $created->loginProviders()->delete();
                     } catch (Exception $e) {
-                        if ($created->id != 1) {
-                            exit('Failed to update Flarum user: '.$e->getMessage());
-                        }
+                        exit('Failed to create Flarum user: '.$e->getMessage());
                     }
 
                 }
@@ -215,14 +214,23 @@ class KeycloakAuthController implements RequestHandlerInterface
 
    public function decorateRegistration(Registration $registration, KeycloakResourceOwner $remoteUser): Registration
    {
-        $remoteUserArray = $remoteUser->toArray();
+      $remoteUserArray = $remoteUser->toArray();
 
-       $registration
-           ->provideTrustedEmail($remoteUser->getEmail())
-           ->suggestUsername(Arr::get($remoteUserArray, 'preferred_username'))
-           ->setPayload($remoteUserArray);
+      $registration->provideTrustedEmail($remoteUser->getEmail());
 
-       return $registration;
+      // Same regex used in Registration.suggestUsername
+      $rawUsername = Arr::get($remoteUserArray, 'preferred_username');
+      $username = preg_replace('/[^a-z0-9-_]/i', '', $rawUsername);
+      if ($username == $rawUsername) {
+        $registration->suggestUsername($rawUsername);
+      } else {
+        $registration->suggestUsername(Str::lower(Str::random(24)));
+        $registration->suggest('nickname', $rawUsername);
+      }
+
+      $registration->setPayload($remoteUserArray);
+
+      return $registration;
    }
 
   public function updateInternalIfNeeded(User $user, KeycloakResourceOwner $remoteUser): User

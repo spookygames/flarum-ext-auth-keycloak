@@ -45,3 +45,11 @@ In the end, extension settings will be:
 * Encryption key (or cert): you may copy here the content of what was displayed after you pressed the "Public key" button on Keycloak.
 * Role-to-group mapping: An associative array with roles as keys and group names as values, in JSON format. Example: `{"ROLE_MEMBER":"Member","ROLE_MODERATOR":"Mods","ROLE_ADMIN":"Admin"}`.
 * Delegate avatars: if enabled, the "picture" attribute from Keycloak will be used to handle user avatar instead of Flarum's default behaviour.
+
+## Troubleshooting
+
+### User created with an odd name that does not match actual user name like 'tgtplwexeowwluxnqid4cjgw' ([original issue](https://github.com/spookygames/flarum-ext-auth-keycloak/issues/21))
+
+Flarum only allows user names that match the regular expression `/[^a-z0-9-_]/i`.
+Every Keycloak user with a "preferred_username" not matching this expression will instead be assigned a random name, as well as a proper Flarum "nickname".
+In order to see the nickname instead of the random user name, activate the Nicknames extension and use the User Display Name driver named _nickname_.
