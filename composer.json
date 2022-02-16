@@ -30,7 +30,10 @@
                 "name": "sign-in",
                 "backgroundColor": "#D13E32",
                 "color": "#fff"
-            }
+            },
+            "optional-dependencies": [
+                "flarum/nicknames"
+            ]
         }
     }
 }
