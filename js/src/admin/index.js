@@ -64,6 +64,14 @@ app.initializers.add('spookygames-auth-keycloak', app => {
     )
     .registerSetting(
       {
+        setting: settingsPrefix + 'attribute_mapping',
+        label: app.translator.trans(translationPrefix + 'attribute_mapping_label'),
+        type: 'text',
+        placeholder: '{"moniker":"nickname","badges":"badges"}',
+      }
+    )
+    .registerSetting(
+      {
         setting: settingsPrefix + 'delegate_avatars',
         label: app.translator.trans(translationPrefix + 'delegate_avatars_label'),
         type: 'boolean',

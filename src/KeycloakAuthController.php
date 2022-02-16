@@ -118,7 +118,7 @@ class KeycloakAuthController implements RequestHandlerInterface
         // Map Keycloak roles onto Flarum groups
         if (isset($remoteUserArray['roles']) && is_array($remoteUserArray['roles'])) {
 
-            if($roleMapping = json_decode($this->settings->get('spookygames-auth-keycloak.role_mapping'), true)) {
+            if ($roleMapping = json_decode($this->settings->get('spookygames-auth-keycloak.role_mapping'), true)) {
 
                 $groups = [];
                 foreach ($remoteUserArray['roles'] as $role) {
@@ -131,6 +131,16 @@ class KeycloakAuthController implements RequestHandlerInterface
             }
         }
 
+        // Map Keycloak attributes with custom mapping, if any
+        $additionalAttributes = [];
+        if ($attributeMapping = json_decode($this->settings->get('spookygames-auth-keycloak.attribute_mapping'), true)) {
+            foreach ($attributeMapping as $sourceAttribute => $targetAttribute) {
+                if ($attributeValue = Arr::get($remoteUserArray, $sourceAttribute)) {
+                    $additionalAttributes[$targetAttribute] = $attributeValue;
+                }
+            }
+        }
+
       if ($localUser = LoginProvider::logIn('keycloak', $remoteUser->getId())) {
             // User already exists and is synced with Keycloak
 
@@ -138,7 +148,7 @@ class KeycloakAuthController implements RequestHandlerInterface
 
             $registration = $this->decorateRegistration(new Registration, $remoteUser);
 
-            $data = $this->buildUpdateData(array_merge($registration->getProvided(), $registration->getSuggested()), $groups);
+            $data = $this->buildUpdateData(array_merge($registration->getProvided(), $registration->getSuggested(), $additionalAttributes), $groups);
 
             try {
                 // Update user
@@ -151,11 +161,9 @@ class KeycloakAuthController implements RequestHandlerInterface
             }
         }
 
-        $actor = $request->getAttribute('actor');
-
         return $this->response->make(
             'keycloak', $remoteUser->getId(),
-            function (Registration $registration) use ($remoteUser, $groups, $actor) {
+            function (Registration $registration) use ($remoteUser, $groups, $additionalAttributes) {
 
                 $registration = $this->decorateRegistration($registration, $remoteUser);
 
@@ -168,7 +176,7 @@ class KeycloakAuthController implements RequestHandlerInterface
                     // User already exists but not synced with Keycloak
 
                     // Update with latest information
-                    $data = $this->buildUpdateData(array_merge($provided, $registration->getSuggested()), $groups);
+                    $data = $this->buildUpdateData(array_merge($provided, $registration->getSuggested(), $additionalAttributes), $groups);
 
                     try {
                         // Update user
@@ -188,7 +196,7 @@ class KeycloakAuthController implements RequestHandlerInterface
                     $registrationToken = RegistrationToken::generate('keycloak', $remoteUser->getId(), $provided, $registration->getPayload());
                     $registrationToken->save();
 
-                    $data = $this->buildUpdateData(array_merge($provided, $registration->getSuggested(), [
+                    $data = $this->buildUpdateData(array_merge($provided, $registration->getSuggested(), $additionalAttributes, [
                             'token' => $registrationToken->token,
                             'provided' => array_keys($provided)
                         ]), $groups);
