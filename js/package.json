@@ -3,7 +3,7 @@
   "name": "@spookygames/flarum-ext-auth-keycloak",
   "dependencies": {
     "flarum-webpack-config": "^1.0",
-    "webpack": "^4.0",
+    "webpack": "^5.75",
     "webpack-cli": "^3.0"
   },
   "scripts": {
