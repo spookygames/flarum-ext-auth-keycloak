@@ -89,7 +89,7 @@ app.initializers.add('spookygames-auth-keycloak', () => {
     extend(AvatarEditor.prototype, 'controlItems', function (items) {
         if (app.forum.attribute('spookygames-auth-keycloak.delegate_avatars')) {
           // Hide avatar controls
-          items.items = {};
+          items._items = {};
         }
         return items;
     });
