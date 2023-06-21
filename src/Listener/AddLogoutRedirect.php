@@ -33,7 +33,8 @@ class AddLogoutRedirect
            'clientSecret'          => $this->settings->get('spookygames-auth-keycloak.app_secret'),
            'redirectUri'           => $redirectUrl,
            'encryptionAlgorithm'   => $this->settings->get('spookygames-auth-keycloak.encryption_algorithm'),
-           'encryptionKey'         => $this->settings->get('spookygames-auth-keycloak.encryption_key')
+           'encryptionKey'         => $this->settings->get('spookygames-auth-keycloak.encryption_key'),
+           'version'               => $this->settings->get('spookygames-auth-keycloak.keycloak_version')
         ]);
 
         $logoutUrl = $provider->getLogoutUrl();

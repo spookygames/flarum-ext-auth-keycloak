@@ -15,13 +15,13 @@ use Flarum\User\Command\RegisterUser;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use Laminas\Diactoros\Response\RedirectResponse;
 use League\OAuth2\Client\Token\AccessToken;
 use Stevenmaguire\OAuth2\Client\Provider\Keycloak;
 use Stevenmaguire\OAuth2\Client\Provider\KeycloakResourceOwner;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Server\RequestHandlerInterface;
-use Zend\Diactoros\Response\RedirectResponse;
 
 class KeycloakAuthController implements RequestHandlerInterface
 {
@@ -69,7 +69,8 @@ class KeycloakAuthController implements RequestHandlerInterface
                 'clientSecret'          => $this->settings->get('spookygames-auth-keycloak.app_secret'),
                 'redirectUri'           => $redirectUri,
                 'encryptionAlgorithm'   => $this->settings->get('spookygames-auth-keycloak.encryption_algorithm'),
-                'encryptionKey'         => $this->settings->get('spookygames-auth-keycloak.encryption_key')
+                'encryptionKey'         => $this->settings->get('spookygames-auth-keycloak.encryption_key'),
+                'version'               => $this->settings->get('spookygames-auth-keycloak.keycloak_version')
             ]);
 
         $session = $request->getAttribute('session');

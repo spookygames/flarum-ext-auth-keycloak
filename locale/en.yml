@@ -3,6 +3,7 @@ flarum-ext-auth-keycloak:
   admin:
     keycloak_settings:
       title: "Keycloak Settings"
+      keycloak_version_label: "Keycloak version"
       server_url_label: "Server URL"
       realm_label: "Realm"
       client_id_label: "Client ID"

@@ -8,10 +8,18 @@ app.initializers.add('spookygames-auth-keycloak', app => {
     .for('spookygames-auth-keycloak')
     .registerSetting(
       {
+        setting: settingsPrefix + 'keycloak_version',
+        label: app.translator.trans(translationPrefix + 'keycloak_version_label'),
+        type: 'text',
+        placeholder: '21.1.1',
+      }
+    )
+    .registerSetting(
+      {
         setting: settingsPrefix + 'server_url',
         label: app.translator.trans(translationPrefix + 'server_url_label'),
         type: 'text',
-        placeholder: 'https://keycloak.example.com/auth',
+        placeholder: 'https://keycloak.example.com',
       }
     )
     .registerSetting(

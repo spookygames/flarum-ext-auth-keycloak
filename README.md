@@ -18,7 +18,7 @@ composer require spookygames/flarum-ext-auth-keycloak
 
 ## Keycloak setup
 
-Written for Keycloak version 4.8.3-final, tested up to 13.0.1, and Flarum 1.3.0. Your mileage may vary.
+Written for Keycloak version 4.8.3-final, tested up to 21.1.1, and Flarum 1.3.0. Your mileage may vary.
 
 From the _Clients_ tab, add a new client for your Flarum instance (or use an existing one). Root URL should be the URL of your Flarum instance.
 
@@ -37,7 +37,8 @@ From the _Realm Settings_ tab, find the key used by the OpenId Connect workflow 
 ## Extension settings
 
 In the end, extension settings will be:
-* Server URL: the URL to your Keycloak instance, like https://keycloak.example.com/auth. Beware the "auth" with no trailing slash.
+* Keycloak version: the version of your Keycloak instance.
+* Server URL: the URL to your Keycloak instance, like https://keycloak.example.com/auth. Beware the "auth" with no trailing slash for Keycloak versions < 20.
 * Realm: the authentication realm you created for your Flarum.
 * Client ID: the name of the client you created above.
 * Client Secret: defaults to client ID if you do not override.
