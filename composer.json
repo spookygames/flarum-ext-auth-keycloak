@@ -15,8 +15,8 @@
         "source": "https://github.com/spookygames/flarum-ext-auth-keycloak"
     },
     "require": {
-        "flarum/core": "^1.3",
-        "stevenmaguire/oauth2-keycloak": "4.0.0"
+        "flarum/core": "^1.8",
+        "stevenmaguire/oauth2-keycloak": "5.1.0"
     },
     "autoload": {
         "psr-4": {
