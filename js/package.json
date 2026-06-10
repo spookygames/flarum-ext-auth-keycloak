@@ -2,7 +2,7 @@
   "private": true,
   "name": "@spookygames/flarum-ext-auth-keycloak",
   "dependencies": {
-    "flarum-webpack-config": "^2.0",
+    "flarum-webpack-config": "^3.0",
     "webpack": "^5.105",
     "webpack-cli": "^5.0"
   },
