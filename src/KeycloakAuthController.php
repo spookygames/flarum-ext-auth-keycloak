@@ -193,7 +193,7 @@ class KeycloakAuthController implements RequestHandlerInterface
         );
     }
 
-    public function resolveGroups(array $remoteUserArray): array
+    public function resolveGroups(array $remoteUserArray): ?array
     {
         $groups = null;
 
