@@ -9,9 +9,6 @@ use Flarum\Forum\Auth\ResponseFactory;
 use Flarum\Settings\SettingsRepositoryInterface;
 use Flarum\User\LoginProvider;
 use Flarum\User\User;
-use Flarum\User\RegistrationToken;
-use Flarum\User\Command\EditUser;
-use Flarum\User\Command\RegisterUser;
 use Illuminate\Contracts\Bus\Dispatcher;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
@@ -65,8 +62,8 @@ class KeycloakAuthController implements RequestHandlerInterface
         $provider = new Keycloak([
                 'authServerUrl'         => $this->settings->get('spookygames-auth-keycloak.server_url'),
                 'realm'                 => $this->settings->get('spookygames-auth-keycloak.realm'),
-                'clientId'              => $this->settings->get('spookygames-auth-keycloak.app_id'),
-                'clientSecret'          => $this->settings->get('spookygames-auth-keycloak.app_secret'),
+                'clientId'              => $this->settings->get('spookygames-auth-keycloak.app_id') ?: $this->settings->get('spookygames-auth-keycloak.client_id'),
+                'clientSecret'          => $this->settings->get('spookygames-auth-keycloak.app_secret') ?: $this->settings->get('spookygames-auth-keycloak.client_secret'),
                 'redirectUri'           => $redirectUri,
                 'encryptionAlgorithm'   => $this->settings->get('spookygames-auth-keycloak.encryption_algorithm'),
                 'encryptionKey'         => $this->settings->get('spookygames-auth-keycloak.encryption_key'),
@@ -82,7 +79,6 @@ class KeycloakAuthController implements RequestHandlerInterface
             // If we don't have an authorization code then get one
             $authUrl = $provider->getAuthorizationUrl();
             $session->put('oauth2state', $provider->getState());
-            header('Location: '.$authUrl);
 
             return new RedirectResponse($authUrl);
         }
@@ -110,7 +106,7 @@ class KeycloakAuthController implements RequestHandlerInterface
             $remoteUser = $provider->getResourceOwner($token);
 
         } catch (Exception $e) {
-            exit('Failed to get resource owner: '.$e->getMessage());
+            throw new Exception('Failed to get resource owner: '.$e->getMessage(), 0, $e);
         }
 
         // Fine! We now know everything we need about our remote user
@@ -132,63 +128,23 @@ class KeycloakAuthController implements RequestHandlerInterface
                 $this->updateUser($localUser, $remoteUser, $data, $this->findFirstAdminUser());
             } catch (Exception $e) {
                 if ($localUser->id != 1) {
-                    exit('Failed to update Flarum user: '.$e->getMessage());
+                    throw new Exception('Failed to update Flarum user: '.$e->getMessage(), 0, $e);
                 }
             }
         }
 
+        $registration = $this->decorateRegistration(new Registration, $remoteUser);
+        $provided = $registration->getProvided();
+
+        if (! LoginProvider::logIn('keycloak', $remoteUser->getId()) && ! User::where(Arr::only($provided, 'email'))->first()) {
+            $this->createLocalUserFromRegistration($registration, $remoteUser, $groups, $additionalAttributes);
+        }
+
         return $this->response->make(
-            'keycloak', $remoteUser->getId(),
-            function (Registration $registration) use ($remoteUser, $groups, $additionalAttributes) {
-
-                $registration = $this->decorateRegistration($registration, $remoteUser);
-
-                $provided = $registration->getProvided();
-
-                $adminActor = $this->findFirstAdminUser();
-
-                if ($localUser = User::where(Arr::only($provided, 'email'))->first()) {
-
-                    // User already exists but not synced with Keycloak
-
-                    // Update with latest information
-                    $data = $this->buildUpdateData(array_merge($provided, $registration->getSuggested(), $additionalAttributes), $groups);
-
-                    try {
-                        $this->updateUser($localUser, $remoteUser, $data, $adminActor);
-                    } catch (Exception $e) {
-                        if ($localUser->id != 1) {
-                            exit('Failed to update Flarum user: '.$e->getMessage());
-                        }
-                    }
-
-                } else {
-
-                    // User does not exist (yet)
-                    // Automatically create it
-
-                    $registrationToken = RegistrationToken::generate('keycloak', $remoteUser->getId(), $provided, $registration->getPayload());
-                    $registrationToken->save();
-
-                    $data = $this->buildUpdateData(array_merge($provided, $registration->getSuggested(), $additionalAttributes, [
-                            'token' => $registrationToken->token,
-                            'provided' => array_keys($provided)
-                        ]), $groups);
-
-                    try {
-                        // Create user
-                        $created = $this->bus->dispatch(new RegisterUser($adminActor, $data));
-
-                        // Then update user to propagate group and attribute mappings
-                        $this->updateUser($created, $remoteUser, $data, $adminActor);
-
-                        // Remove its new login provider (will be re-created right afterwards)
-                        $created->loginProviders()->delete();
-                    } catch (Exception $e) {
-                        exit('Failed to create Flarum user: '.$e->getMessage());
-                    }
-
-                }
+            'keycloak',
+            $remoteUser->getId(),
+            function (Registration $registration) use ($remoteUser) {
+                $this->decorateRegistration($registration, $remoteUser);
             }
         );
     }
@@ -200,7 +156,9 @@ class KeycloakAuthController implements RequestHandlerInterface
         // Map Keycloak roles onto Flarum groups
         if ($roleMapping = json_decode($this->settings->get('spookygames-auth-keycloak.role_mapping'), true)) {
             $roles = [];
-            if (($realmAccess = $remoteUserArray['realm_access']) && is_array($realmAccess) && ($realmAccessRoles = $realmAccess['roles']) && is_array($realmAccessRoles)) {
+            $realmAccess = Arr::get($remoteUserArray, 'realm_access');
+            $realmAccessRoles = is_array($realmAccess) ? Arr::get($realmAccess, 'roles') : null;
+            if (is_array($realmAccessRoles)) {
                 $roles = array_merge($roles, $realmAccessRoles);
             }
 
@@ -267,12 +225,38 @@ class KeycloakAuthController implements RequestHandlerInterface
 
     public function updateUser(User $localUser, KeycloakResourceOwner $remoteUser, array $updateData, User $actor): User
     {
-        $this->bus->dispatch(new EditUser($localUser->id, $actor, $updateData));
+        $attributes = Arr::get($updateData, 'attributes', []);
 
-        // Use specific method to change avatar url
-        if (($attributes = $updateData['attributes']) && ($avatar_url = $attributes['avatar_url']) && $localUser->getRawOriginal('avatar_url') != $avatar_url) {
-            $localUser->changeAvatarPath($avatar_url);
-            $localUser->save();
+        if (! empty($attributes['username']) && $attributes['username'] !== $localUser->username) {
+            $localUser->rename($attributes['username']);
+        }
+
+        if (! empty($attributes['email']) && $attributes['email'] !== $localUser->email) {
+            $localUser->changeEmail($attributes['email']);
+            $localUser->is_email_confirmed = true;
+        }
+
+        foreach ($attributes as $key => $value) {
+            if (in_array($key, ['username', 'email', 'avatar_url'], true)) {
+                continue;
+            }
+
+            $localUser->setAttribute($key, $value);
+        }
+
+        if (array_key_exists('avatar_url', $attributes) && $attributes['avatar_url'] !== $localUser->getRawOriginal('avatar_url')) {
+            $localUser->changeAvatarPath($attributes['avatar_url']);
+        }
+
+        $localUser->save();
+
+        $groups = collect(Arr::get($updateData, 'relationships.groups.data', []))
+            ->pluck('id')
+            ->filter()
+            ->all();
+
+        if ($groups) {
+            $localUser->groups()->sync($groups);
         }
 
         return $localUser;
@@ -283,7 +267,7 @@ class KeycloakAuthController implements RequestHandlerInterface
         return Group::where('id', '1')->firstOrFail()->users()->first();
     }
 
-     public function findGroupByName($name): Group
+     public function findGroupByName($name): ?Group
      {
          return Group::where('name_singular', $name)->orWhere('name_plural', $name)->first();
      }
@@ -299,5 +283,48 @@ class KeycloakAuthController implements RequestHandlerInterface
       }
 
        return $data;
+    }
+
+    protected function createLocalUserFromRegistration(Registration $registration, KeycloakResourceOwner $remoteUser, ?array $groups, array $additionalAttributes): User
+    {
+        $provided = $registration->getProvided();
+        $suggested = $registration->getSuggested();
+
+        $username = $provided['username'] ?? $suggested['username'] ?? 'user_'.Str::lower(Str::random(12));
+        $baseUsername = $username;
+        $suffix = 1;
+
+        while (User::where('username', $username)->exists()) {
+            $username = $baseUsername.'_'.$suffix;
+            $suffix++;
+        }
+
+        $email = $provided['email'] ?? null;
+        if (! $email) {
+            throw new Exception('Keycloak user did not provide an email address');
+        }
+
+        $user = new User();
+        $user->username = $username;
+        $user->email = $email;
+        $user->is_email_confirmed = true;
+        $user->password = password_hash(Str::random(48), PASSWORD_DEFAULT);
+        $user->save();
+
+        $user->loginProviders()->create([
+            'provider' => 'keycloak',
+            'identifier' => $remoteUser->getId(),
+        ]);
+
+        if ($groups) {
+            $user->groups()->sync(collect($groups)->pluck('id')->all());
+        }
+
+        if (($avatarUrl = Arr::get($additionalAttributes, 'avatar_url'))) {
+            $user->avatar_url = $avatarUrl;
+            $user->save();
+        }
+
+        return $user;
     }
 }
