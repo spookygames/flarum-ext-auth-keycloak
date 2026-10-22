@@ -1,10 +1,7 @@
 import { extend, override } from 'flarum/common/extend';
 import app from 'flarum/forum/app';
 import HeaderSecondary from 'flarum/forum/components/HeaderSecondary';
-import SettingsPage from 'flarum/forum/components/SettingsPage';
 import Button from 'flarum/common/components/Button';
-import LogInModal from 'flarum/forum/components/LogInModal';
-import AvatarEditor from 'flarum/forum/components/AvatarEditor';
 
 app.initializers.add('spookygames-auth-keycloak', () => {
   function addKeycloakLoginButton(items) {
@@ -46,18 +43,18 @@ app.initializers.add('spookygames-auth-keycloak', () => {
     }
   });
 
-  extend(SettingsPage.prototype, 'accountItems', function (items) {
+  extend('flarum/forum/components/SettingsPage', 'accountItems', function (items) {
     items.remove('changeEmail');
     items.remove('changePassword');
   });
 
-  extend(SettingsPage.prototype, 'settingsItems', function (items) {
+  extend('flarum/forum/components/SettingsPage', 'settingsItems', function (items) {
     if (items.has('account') && items.get('account').children.length === 0) {
       items.remove('account');
     }
   });
 
-  extend(LogInModal.prototype, 'fields', function (items) {
+  extend('flarum/forum/components/LogInModal', 'fields', function (items) {
     items.remove('identification');
     items.remove('password');
     items.remove('remember');
@@ -68,11 +65,11 @@ app.initializers.add('spookygames-auth-keycloak', () => {
     return items;
   });
 
-  override(LogInModal.prototype, 'footer', function () {
+  override('flarum/forum/components/LogInModal', 'footer', function () {
     return [];
   });
 
-  extend(AvatarEditor.prototype, 'view', function (vdom) {
+  extend('flarum/forum/components/AvatarEditor', 'view', function (vdom) {
     if (app.forum.attribute('spookygames-auth-keycloak.delegate_avatars')) {
       vdom.children.length = 1;
     }
@@ -80,7 +77,7 @@ app.initializers.add('spookygames-auth-keycloak', () => {
     return vdom;
   });
 
-  extend(AvatarEditor.prototype, 'controlItems', function (items) {
+  extend('flarum/forum/components/AvatarEditor', 'controlItems', function (items) {
     if (app.forum.attribute('spookygames-auth-keycloak.delegate_avatars')) {
       items._items = {};
     }
