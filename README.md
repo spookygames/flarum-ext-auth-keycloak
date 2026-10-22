@@ -10,6 +10,8 @@ Originally written for Keycloak 4.8.3-final and Flarum 0.1.0-beta.5.
 
 Tested up to Keycloak 24.0.2 and Flarum 1.8.4 (versions used for the screenshots).
 
+Flarum 2 support has been validated on a fresh PostgreSQL-backed install.
+
 Your mileage may vary.
 
 ## Base setup
